@@ -197,7 +197,7 @@
             
               <i class="menu-item-icon fa fa-fw fa-home"></i> <br />
             
-            Startseite
+            Home
           </a>
         </li>
       
@@ -207,7 +207,7 @@
             
               <i class="menu-item-icon fa fa-fw fa-archive"></i> <br />
             
-            Archiv
+            Archives
           </a>
         </li>
       
@@ -263,7 +263,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2017/09/02/java多线程/" itemprop="url">Java多线程总结</a></h1>
+                <a class="post-title-link" href="/2017/09/02/java多线程/" itemprop="url">Java多线程</a></h1>
         
 
         <div class="post-meta">
@@ -273,7 +273,7 @@
                 <i class="fa fa-calendar-o"></i>
               </span>
               
-                <span class="post-meta-item-text">Veröffentlicht am</span>
+                <span class="post-meta-item-text">Posted on</span>
               
               <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-09-02T15:58:01+08:00">
                 2017-09-02
@@ -315,11 +315,37 @@
       
         
           
-            <h1 id="线程池—Executors源码分析"><a href="#线程池—Executors源码分析" class="headerlink" title="线程池—Executors源码分析"></a>线程池—Executors源码分析</h1><p>@[源码解析|andy]</p>
+            <h1 id="多线程—Executors线程池"><a href="#多线程—Executors线程池" class="headerlink" title="多线程—Executors线程池"></a>多线程—Executors线程池</h1><p>@[源码解析|andy]</p>
 <hr>
 <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><p>Executor框架的最大优点是把任务的提交和执行解耦。要执行任务的人只需把Task描述清楚，然后提交即可。这个Task是怎么被执行的，被谁执行的，什么时候执行的，提交的人就不用关心了。具体点讲，提交一个Callable对象给ExecutorService（如最常用的线程池ThreadPoolExecutor），将得到一个Future对象，调用Future对象的get方法等待执行结果就好了。经过这样的封装，对于使用者来说，提交任务获取结果的过程大大简化，调用者直接从提交的地方就可以等待获取执行结果。</p>
-<h2 id="简单例子"><a href="#简单例子" class="headerlink" title="简单例子"></a>简单例子</h2><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div></pre></td><td class="code"><pre><div class="line">ExecutorService pool = Executors.newFixedThreadPool(<span class="number">7</span>);</div><div class="line"><span class="comment">//提交作业，作业内容封装在Callable中，约定好了输出的类型是String。</span></div><div class="line">Future result = pool.submit(<span class="keyword">new</span> Callable&lt;String&gt;() &#123;</div><div class="line">             <span class="function"><span class="keyword">public</span> String <span class="title">call</span><span class="params">()</span> <span class="keyword">throws</span> Exception</span></div><div class="line"><span class="function">             </span>&#123;</div><div class="line">                 <span class="keyword">return</span> <span class="string">"我是一个要被线程执行的任务！"</span>;</div><div class="line">             &#125;</div><div class="line">         &#125;);</div><div class="line">String outputs = result.get().toString();</div><div class="line">System.out.println(outputs);</div></pre></td></tr></table></figure>
-<h3 id="源码分析"><a href="#源码分析" class="headerlink" title="源码分析"></a>源码分析</h3><p><strong>主要步骤</strong>：Task提交，Task执行，获取Task执行结果。<br><strong>大体过程</strong>：<br> &nbsp; &nbsp; &nbsp; &nbsp;构建线程池时定义了一个额定大小，当线程池内工作线程数小于额定大小，有新任务提交就创建新工作线程，如果超过该阈值，把接收任务加到任务队列里面。<br> &nbsp; &nbsp; &nbsp; &nbsp;但是如果任务队列里的任务实在太多了，那还是要申请额外的工作线程来帮忙，如果还是不够用就拒绝服务。<br> &nbsp; &nbsp; &nbsp; &nbsp;执行时不断从任务队列中获取任务进行执行。</p>
+<h2 id="多线程实现方式"><a href="#多线程实现方式" class="headerlink" title="多线程实现方式"></a>多线程实现方式</h2><p>Java多线程实现方式主要有三种：</p>
+<ol>
+<li>继承Thread类（Thread 类只支持 Runnable）</li>
+<li>实现Runnable接口</li>
+<li>使用ExecutorService(Executors的线程池都实现该接口)、Callable、Future实现有返回结果的多线程。多结合Executors 的线程池一起使用。</li>
+</ol>
+<p>其中前两种方式线程执行完后都没有返回值，只有最后一种是带返回值的。</p>
+<p><strong> 实现Runnable接口的对象，只有绑定一个Thread才能执行，因为Runnable没有start方法。意思就是，Thread才是线程，Runnable不是，实现Runnable的类都是可被线程执行的任务。</strong><br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">ThreadDemo01</span> </span>&#123; </div><div class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123; </div><div class="line">     MyRunnable mt1=<span class="keyword">new</span> MyRunnable (<span class="string">"任务a"</span>); </div><div class="line">     MyRunnable mt2=<span class="keyword">new</span> MyRunnable (<span class="string">"任务b"</span>); </div><div class="line">     <span class="keyword">new</span> Thread(mt1).start(); <span class="comment">//为任务绑定线程</span></div><div class="line">     <span class="keyword">new</span> Thread(mt2).start(); </div><div class="line">&#125; </div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<h2 id="Callable与-Future"><a href="#Callable与-Future" class="headerlink" title="Callable与 Future"></a>Callable与 Future</h2><p>Callable与 Future 两功能是Java在后续版本中为了适应多并法才加入的，Callable是类似于Runnable的接口，实现Callable接口的类和实现Runnable的类都是可被其他线程执行的任务。</p>
+<h3 id="1-Callable和Runnable的区别如下："><a href="#1-Callable和Runnable的区别如下：" class="headerlink" title="1. Callable和Runnable的区别如下："></a>1. Callable和Runnable的区别如下：</h3><ul>
+<li>Callable定义的方法是call，而Runnable定义的方法是run。</li>
+<li>Callable的call方法 <strong>可以有返回值</strong>，而Runnable的run方法 <strong>不能有返回值</strong>。</li>
+<li>Callable的call方法可抛出异常，而Runnable的run方法不能抛出异常。 </li>
+</ul>
+<h3 id="2-Future-介绍"><a href="#2-Future-介绍" class="headerlink" title="2. Future 介绍"></a>2. Future 介绍</h3><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;Future表示异步计算的结果，它提供了检查计算是否完成的方法，以等待计算的完成，并检索计算的结果。Future的cancel方法可以取消任务的执行，它有一布尔参数，参数为 true 表示立即中断任务的执行，参数为 false 表示允许正在运行的任务运行完成。Future的 get 方法等待计算完成，获取计算结果。<strong>可以通过get方法获取执行结果，该方法会阻塞直到任务返回结果。即调用get方法的线程会阻塞。谁调用阻塞谁，main调用就阻塞main</strong>。</p>
+<h3 id="3-Executors线程池"><a href="#3-Executors线程池" class="headerlink" title="3. Executors线程池"></a>3. Executors线程池</h3><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;线程池作用就是限制系统中执行线程的数量。<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;线程数量少了浪费了系统资源，多了造成系统拥挤效率不高。用线程池控制线程数量，其他线程 排队等候。一个任务执行完毕，再从队列的中取最前面的任务开始执行。若队列中没有等待进程，线程池的这一资源处于等待。当一个新任务需要运行时，如果线程 池中有等待的工作线程，就可以开始运行了；否则进入等待队列。<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;<strong>Executor框架的最大优点是把任务的提交和执行解耦</strong>。要执行任务的人只需把Task描述清楚（task一般封装在Callable或者Runnable中），然后提交即可。这个Task是怎么被执行的，被谁执行的，什么时候执行的，提交的人就不用关心了。具体点讲，提交一个Callable对象给ExecutorService（如最常用的线程池ThreadPoolExecutor），将得到一个Future对象，调用Future对象的get方法等待执行结果就好了。</p>
+<p><strong>简单梳理下思路</strong>：<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;构建线程池时定义了一个额定大小，当线程池内工作线程数小于额定大小，有新任务进来就创建新工作线程，如果超过该阈值，则一般就不创建了，只是把接收任务加到任务队列里面。但是如果任务队列里的任务实在太多了，那还是要申请额外的工作线程来帮忙。如果还是不够用就拒绝服务。这个场景其实也是每天我们工作中会碰到的场景。我们管人的老大，手里都有一定HC（Head Count），当上面老大有活分下来，手里人不够，但是不超过HC，我们就自己招人；如果超过了还是忙不过来，那就向上门老大申请借调人手来帮忙；如果还是干不完，那就没办法了，新任务咱就不接了。<br><strong><em>下面的总结最经典</em></strong>：<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; 当将一个 Runnable/Callable 的对象传递给 ExecutorService 的 submit 方法，则该 call 方法自动在一个线程上执行，并且会返回执行结果 Future 对象。任务需要线程来执行，一个任务就是一个Runnable 对象。 <strong>一个Callable对象并不就是一个线程，如果不用线程池的话，每创建一个Runnable对象，都要为每一个Runnable对象绑定一个Thread线程</strong>，调用Thread的start方法启动线程，这样一个任务都要对应一个线程。但是如果用线程池的话，每创建一个Runnable对象任务，提交给线程池，而线程池不会为每一个Runnable对象创建一个Thread线程，而是绑定到的已有的线程来处理任务，归根到底就是线程池将start方法统一管理统一协调调用。这就做到了线程的复用。下面例子1有明确的验证。</p>
+<h2 id="例子1：使用ExecutorService、Callable、Future实现有返回结果的多线程"><a href="#例子1：使用ExecutorService、Callable、Future实现有返回结果的多线程" class="headerlink" title="例子1：使用ExecutorService、Callable、Future实现有返回结果的多线程"></a>例子1：使用ExecutorService、Callable、Future实现有返回结果的多线程</h2><p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; ExecutorService、Callable、Future这个对象实际上都是属于Executor框架中的功能类。 可返回值的任务必须实现Callable接口，类似的，无返回值的任务必须Runnable接口。执行Callable任务后，可以获取一个Future的对象，在该对象上调用get就可以获取到Callable任务返回的Object了，再结合线程池接口ExecutorService就可以实现传说中有返回结果的多线程了。下面提供了一个完整的有返回结果的多线程测试例子，在JDK1.5下验证过没问题可以直接使用。<br>代码如下(重点看注释)：<br><figure class="highlight java"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">import</span> java.util.concurrent.*; </div><div class="line"><span class="keyword">import</span> java.util.Date; </div><div class="line"><span class="keyword">import</span> java.util.List; </div><div class="line"><span class="keyword">import</span> java.util.ArrayList; </div><div class="line"></div><div class="line"><span class="comment">/**</span></div><div class="line"><span class="comment">* 有返回值的线程</span></div><div class="line"><span class="comment">*/</span> </div><div class="line"><span class="meta">@SuppressWarnings</span>(<span class="string">"unchecked"</span>) </div><div class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">CallableTest</span> </span>&#123; </div><div class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> ExecutionException,  InterruptedException </span>&#123; </div><div class="line">       System.out.println(<span class="string">"----程序开始运行----"</span>);</div><div class="line">       Date date1 = <span class="keyword">new</span> Date(); </div><div class="line"> </div><div class="line">       <span class="comment">// 一个有5个作业线程的线程池，老大的老大找到一个管7个人的小团队的老大</span></div><div class="line">       ExecutorService pool = Executors.newFixedThreadPool(<span class="number">3</span>); <span class="comment">//创建一个数目固定的线程池，只有3个线程       </span></div><div class="line"></div><div class="line">       List&lt;Future&gt; list = <span class="keyword">new</span> ArrayList&lt;Future&gt;();<span class="comment">//创建多个有返回值的任务 ，保存返回的结果</span></div><div class="line"></div><div class="line">       <span class="keyword">for</span> (<span class="keyword">int</span> i = <span class="number">1</span>; i &lt;= <span class="number">5</span>; i++) &#123; </div><div class="line">          Callable c = <span class="keyword">new</span> MyCallable(<span class="string">"任务"</span>+i + <span class="string">" "</span>);<span class="comment">//创建5个任务，依次提交到线程池中，交给线程池中的三个线程来执行</span></div><div class="line">          <span class="comment">//提交任务给老大，作业内容封装在Callable中。        </span></div><div class="line">          Future f = pool.submit(c); <span class="comment">//提交一个Callable任务用于执行（运行call()方法），并将结果保存在Future对象中。</span></div><div class="line">          list.add(f); <span class="comment">//保存返回的结果</span></div><div class="line">       &#125; </div><div class="line">       <span class="comment">// 关闭线程池 </span></div><div class="line">       pool.shutdown(); </div><div class="line"></div><div class="line">       <span class="comment">// 获取所有并发任务的运行结果 </span></div><div class="line">       <span class="keyword">for</span> (Future f : list) &#123; </div><div class="line">          <span class="comment">// 从Future对象上获取任务的返回值，并输出到控制台 </span></div><div class="line">          System.out.println(<span class="string">"|||   "</span> + f.get().toString()); <span class="comment">//get方法会获得call的返回对象，get方法会阻塞直到计算完成</span></div><div class="line">       &#125; </div><div class="line"></div><div class="line">       Date date2 = <span class="keyword">new</span> Date(); </div><div class="line">       System.out.println(<span class="string">"----程序结束运行----"</span>); </div><div class="line"></div><div class="line">   &#125; </div><div class="line">&#125; </div><div class="line"></div><div class="line"><span class="class"><span class="keyword">class</span> <span class="title">MyCallable</span> <span class="keyword">implements</span> <span class="title">Callable</span>&lt;<span class="title">Object</span>&gt; </span>&#123; </div><div class="line">    <span class="keyword">private</span> String taskNum; </div><div class="line"></div><div class="line">    MyCallable(String taskNum) &#123; </div><div class="line">       <span class="keyword">this</span>.taskNum = taskNum; </div><div class="line">    &#125; </div><div class="line"></div><div class="line">    <span class="function"><span class="keyword">public</span> Object <span class="title">call</span><span class="params">()</span> <span class="keyword">throws</span> Exception </span>&#123;  <span class="comment">// call()方法相当于Runnable的run()方法 </span></div><div class="line">       System.out.println(<span class="string">"线程"</span>+Thread.currentThread().getName()+<span class="string">" &gt;&gt;&gt; "</span> + taskNum+<span class="string">"开始执行"</span>); </div><div class="line">       Date dateTmp1 = <span class="keyword">new</span> Date(); </div><div class="line">       Thread.sleep(<span class="number">1000</span>); </div><div class="line">       Date dateTmp2 = <span class="keyword">new</span> Date(); </div><div class="line">       <span class="keyword">long</span> time = dateTmp2.getTime() - dateTmp1.getTime(); </div><div class="line">       System.out.println(<span class="string">"&gt;&gt;&gt;"</span> + taskNum + <span class="string">"执行完成"</span>); </div><div class="line">       <span class="keyword">return</span> taskNum + <span class="string">"任务返回运行结果,当前任务时间【"</span> + time + <span class="string">"毫秒】"</span>; </div><div class="line">    &#125; </div><div class="line">&#125;</div></pre></td></tr></table></figure></p>
+<p><strong>运行结果</strong>：<br><img src="/images/result1.png" alt=""></p>
+<p><strong>结果分析</strong>：<br>从结果中可以看出， <strong> 5个任务是在线程池的3个线程上执行的 </strong> 。</p>
+<p><strong>代码说明</strong>：<br>上述代码中Executors类，提供了一系列工厂方法用于创先线程池，返回的线程池都实现了ExecutorService接口。</p>
+<ol>
+<li>public static ExecutorService <strong>newFixedThreadPool</strong>(int nThreads)<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;创建固定数目线程的线程池。每提交一个任务就创建一个线程，当达到最大长度，线程池的长度不再变化。如果一个线程因为非预期的异常而结束，线程池会补充一个新的线程。任意时间点，最多只能有固定数目的活动线程存在，此时如果有新的线程要建立，只能放在另外的队列中等待，直到当前的线程池中某个线程终止直接被移出池子。<br>当要加入的池的线程(或者任务)超过池最大尺寸时候，则入此线程池需要排队等待。 一旦池中有线程执行完毕，则排队等待的某个线程会入池执行。</li>
+<li>public static ExecutorService <strong>newCachedThreadPool()</strong><br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;创建一个可缓存的线程池，调用execute 将重用以前构造的线程（如果线程可用）。如果现有线程没有可用的，则创建一个新线程并添加到池中。终止并从缓存中移除那些已有 60 秒钟未被使用的线程。</li>
+<li>public static ExecutorService <strong>newSingleThreadExecutor()</strong><br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;创建一个单线程化的Executor。</li>
+<li>public static ScheduledExecutorService <strong>newScheduledThreadPool</strong>(int corePoolSize)<br>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;创建一个支持定时及周期性的任务执行的线程池，多数情况下可用来替代Timer类。</li>
+</ol>
+<p>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp;ExecutoreService提供了submit()方法，传递一个Callable，或Runnable，返回Future。如果Executor后台线程池还没有完成Callable的计算，这调用返回Future对象的get()方法，会阻塞直到计算完成。</p>
 
           
         
@@ -368,7 +394,7 @@
   
   
   <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/09/02/index2/">
+    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/09/02/java线程同步/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="name" content="John Doe">
@@ -387,7 +413,7 @@
         
           <h1 class="post-title" itemprop="name headline">
                 
-                <a class="post-title-link" href="/2017/09/02/index2/" itemprop="url">Hello World2</a></h1>
+                <a class="post-title-link" href="/2017/09/02/java线程同步/" itemprop="url">java线程同步</a></h1>
         
 
         <div class="post-meta">
@@ -397,135 +423,7 @@
                 <i class="fa fa-calendar-o"></i>
               </span>
               
-                <span class="post-meta-item-text">Veröffentlicht am</span>
-              
-              <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-09-02T14:17:27+08:00">
-                2017-09-02
-              </time>
-            
-
-            
-
-            
-          </span>
-
-          
-
-          
-            
-          
-
-          
-          
-
-          
-
-          
-
-          
-
-        </div>
-      </header>
-    
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-      
-
-      
-        
-          
-            <p>Welcome to <a href="https://hexo.io/" target="_blank" rel="external">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank" rel="external">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="external">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="external">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo new <span class="string">"My New Post"</span></div></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank" rel="external">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo server</div></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/server.html" target="_blank" rel="external">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo generate</div></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank" rel="external">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo deploy</div></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/deployment.html" target="_blank" rel="external">Deployment</a></p>
-
-          
-        
-      
-    </div>
-    
-    
-    
-
-    
-
-    
-
-    
-
-    <footer class="post-footer">
-      
-
-      
-
-      
-
-      
-      
-        <div class="post-eof"></div>
-      
-    </footer>
-  </div>
-  
-  
-  
-  </article>
-
-
-    
-      
-
-  
-
-  
-  
-  
-
-  <article class="post post-type-normal" itemscope itemtype="http://schema.org/Article">
-  
-  
-  
-  <div class="post-block">
-    <link itemprop="mainEntityOfPage" href="http://yoursite.com/2017/09/02/hello-world/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="name" content="John Doe">
-      <meta itemprop="description" content="">
-      <meta itemprop="image" content="/images/avatar.gif">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="Andy | 个人博客">
-    </span>
-
-    
-      <header class="post-header">
-
-        
-        
-          <h1 class="post-title" itemprop="name headline">
-                
-                <a class="post-title-link" href="/2017/09/02/hello-world/" itemprop="url">Hello World</a></h1>
-        
-
-        <div class="post-meta">
-          <span class="post-time">
-            
-              <span class="post-meta-item-icon">
-                <i class="fa fa-calendar-o"></i>
-              </span>
-              
-                <span class="post-meta-item-text">Veröffentlicht am</span>
+                <span class="post-meta-item-text">Posted on</span>
               
               <time title="Post created" itemprop="dateCreated datePublished" datetime="2017-09-02T14:02:09+08:00">
                 2017-09-02
@@ -567,16 +465,7 @@
       
         
           
-            <p>Welcome to <a href="https://hexo.io/" target="_blank" rel="external">Hexo</a>! This is your very first post. Check <a href="https://hexo.io/docs/" target="_blank" rel="external">documentation</a> for more info. If you get any problems when using Hexo, you can find the answer in <a href="https://hexo.io/docs/troubleshooting.html" target="_blank" rel="external">troubleshooting</a> or you can ask me on <a href="https://github.com/hexojs/hexo/issues" target="_blank" rel="external">GitHub</a>.</p>
-<h2 id="Quick-Start"><a href="#Quick-Start" class="headerlink" title="Quick Start"></a>Quick Start</h2><h3 id="Create-a-new-post"><a href="#Create-a-new-post" class="headerlink" title="Create a new post"></a>Create a new post</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo new <span class="string">"My New Post"</span></div></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/writing.html" target="_blank" rel="external">Writing</a></p>
-<h3 id="Run-server"><a href="#Run-server" class="headerlink" title="Run server"></a>Run server</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo server</div></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/server.html" target="_blank" rel="external">Server</a></p>
-<h3 id="Generate-static-files"><a href="#Generate-static-files" class="headerlink" title="Generate static files"></a>Generate static files</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo generate</div></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/generating.html" target="_blank" rel="external">Generating</a></p>
-<h3 id="Deploy-to-remote-sites"><a href="#Deploy-to-remote-sites" class="headerlink" title="Deploy to remote sites"></a>Deploy to remote sites</h3><figure class="highlight bash"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">$ hexo deploy</div></pre></td></tr></table></figure>
-<p>More info: <a href="https://hexo.io/docs/deployment.html" target="_blank" rel="external">Deployment</a></p>
-
+            
           
         
       
@@ -656,8 +545,8 @@
             
               <a href="/archives/">
             
-                <span class="site-state-item-count">3</span>
-                <span class="site-state-item-name">Artikel</span>
+                <span class="site-state-item-count">2</span>
+                <span class="site-state-item-name">posts</span>
               </a>
             </div>
           
@@ -712,7 +601,7 @@
 </div>
 
 
-  <div class="powered-by">Erstellt mit  <a class="theme-link" href="https://hexo.io">Hexo</a></div>
+  <div class="powered-by">Powered by <a class="theme-link" href="https://hexo.io">Hexo</a></div>
 
   <span class="post-meta-divider">|</span>
 
